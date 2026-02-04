@@ -1,5 +1,6 @@
 <?php
 
+use Oliverde8\Component\PhpEtl\Builder\Factories\ChainRepeatFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\ChainSplitFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Extract\ExternalFileFinderFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Extract\JsonExtractFactory;
@@ -12,6 +13,7 @@ use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\LogFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\RuleTransformFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\SplitItemFactory;
 use Oliverde8\Component\PhpEtl\ChainBuilder;
+use Oliverde8\Component\PhpEtl\ChainOperation\ChainRepeatOperationV1;
 use Oliverde8\Component\PhpEtl\ChainOperation\ChainSplitOperationV1;
 use Oliverde8\Component\PhpEtl\ChainOperation\Extract\ExternalFileFinderOperation;
 use Oliverde8\Component\PhpEtl\ChainOperation\Extract\JsonExtractOperation;
@@ -81,6 +83,7 @@ $chainBuilder->registerFactory(new FilterDataFactory('filter', FilterDataOperati
 $chainBuilder->registerFactory(new SimpleGroupingFactory('simple-grouping', SimpleGroupingOperation::class));
 $chainBuilder->registerFactory(new JsonFileWriterFactory('json-write', FileWriterOperation::class));
 $chainBuilder->registerFactory(new ChainSplitFactory('split', ChainSplitOperationV1::class, $chainBuilder));
+$chainBuilder->registerFactory(new ChainRepeatFactory('repeat', ChainRepeatOperationV1::class, $chainBuilder));
 $chainBuilder->registerFactory(new JsonExtractFactory('json-read', JsonExtractOperation::class));
 $chainBuilder->registerFactory(new ExternalFileFinderFactory('external-file-finder-local', ExternalFileFinderOperation::class, $fileSystem));
 $chainBuilder->registerFactory(new ExternalFileProcessorFactory('external-file-processor', ExternalFileProcessorOperation::class));

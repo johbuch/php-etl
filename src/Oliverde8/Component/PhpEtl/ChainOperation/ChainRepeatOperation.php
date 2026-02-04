@@ -16,10 +16,10 @@ class ChainRepeatOperation extends AbstractChainOperation implements DetailedObs
 {
     use SplittedChainOperationTrait;
 
-    private ExpressionLanguage $expressionLanguage;
-    private ChainProcessor $chainProcessor;
-    private bool $allowAsynchronous;
-    private string $validationExpression;
+    protected ExpressionLanguage $expressionLanguage;
+    protected ChainProcessor $chainProcessor;
+    protected bool $allowAsynchronous;
+    protected string $validationExpression;
 
     public function __construct(ChainBuilderV2 $chainBuilder, ChainRepeatConfig $config)
     {
