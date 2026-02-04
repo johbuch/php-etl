@@ -1,19 +1,23 @@
 <?php
 
 use Oliverde8\Component\PhpEtl\Builder\Factories\ChainSplitFactory;
+use Oliverde8\Component\PhpEtl\Builder\Factories\Extract\ExternalFileFinderFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Extract\JsonExtractFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Grouping\SimpleGroupingFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Loader\CsvFileWriterFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Loader\JsonFileWriterFactory;
+use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\ExternalFileProcessorFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\FilterDataFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\LogFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\RuleTransformFactory;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\SplitItemFactory;
 use Oliverde8\Component\PhpEtl\ChainBuilder;
 use Oliverde8\Component\PhpEtl\ChainOperation\ChainSplitOperationV1;
+use Oliverde8\Component\PhpEtl\ChainOperation\Extract\ExternalFileFinderOperation;
 use Oliverde8\Component\PhpEtl\ChainOperation\Extract\JsonExtractOperation;
 use Oliverde8\Component\PhpEtl\ChainOperation\Grouping\SimpleGroupingOperation;
 use Oliverde8\Component\PhpEtl\ChainOperation\Loader\FileWriterOperation;
+use Oliverde8\Component\PhpEtl\ChainOperation\Transformer\ExternalFileProcessorOperation;
 use Oliverde8\Component\PhpEtl\ChainOperation\Transformer\FilterDataOperation;
 use Oliverde8\Component\PhpEtl\ChainOperation\Transformer\LogOperation;
 use Oliverde8\Component\PhpEtl\Builder\Factories\Transformer\SimpleHttpOperationFactory;
@@ -26,6 +30,7 @@ use Oliverde8\Component\PhpEtl\Builder\Factories\Extract\CsvExtractFactory;
 
 use Oliverde8\Component\PhpEtl\ChainOperation\Extract\CsvExtractOperation;
 
+use Oliverde8\Component\PhpEtl\Model\File\LocalFileSystem;
 use Oliverde8\Component\RuleEngine\RuleApplier;
 use Oliverde8\Component\RuleEngine\Rules\ExpressionLanguage;
 use Oliverde8\Component\RuleEngine\Rules\Get;
@@ -34,7 +39,7 @@ use Oliverde8\Component\RuleEngine\Rules\StrToLower;
 use Oliverde8\Component\RuleEngine\Rules\StrToUpper;
 use Psr\Log\AbstractLogger;
 
-require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // Simple logger that outputs to console
 class ConsoleLogger extends AbstractLogger
@@ -64,6 +69,7 @@ if (!function_exists('getEtlExecutionContextFactory')) {
 }
 
 $chainBuilder = new ChainBuilder(getEtlExecutionContextFactory());
+$fileSystem = new LocalFileSystem("/");
 
 $chainBuilder->registerFactory(new CsvExtractFactory('csv-read', CsvExtractOperation::class));
 $chainBuilder->registerFactory(new LogFactory('log', LogOperation::class));
@@ -76,4 +82,6 @@ $chainBuilder->registerFactory(new SimpleGroupingFactory('simple-grouping', Simp
 $chainBuilder->registerFactory(new JsonFileWriterFactory('json-write', FileWriterOperation::class));
 $chainBuilder->registerFactory(new ChainSplitFactory('split', ChainSplitOperationV1::class, $chainBuilder));
 $chainBuilder->registerFactory(new JsonExtractFactory('json-read', JsonExtractOperation::class));
+$chainBuilder->registerFactory(new ExternalFileFinderFactory('external-file-finder-local', ExternalFileFinderOperation::class, $fileSystem));
+$chainBuilder->registerFactory(new ExternalFileProcessorFactory('external-file-processor', ExternalFileProcessorOperation::class));
 
