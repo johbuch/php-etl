@@ -32,6 +32,8 @@ class ChainBuilder
      */
     public function __construct(protected ExecutionContextFactoryInterface $contextFactory)
     {
+        trigger_deprecation('oliverde8/php-etl', '2.0', 'Yaml version of the ETL configuration is deprecated. Please use new PHP format https://php-etl.oliver-decramer.com/doc/getting-started.html');
+
         $this->expressionLanguage = new ExpressionLanguage();
     }
 
