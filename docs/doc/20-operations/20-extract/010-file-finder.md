@@ -5,9 +5,11 @@ subTitle: Extract - File Finder
 ---
 
 The `ExternalFileFinderConfig` operation is the base operation for importing files from **remote or external file systems**. 
-It is responsible for **locating files** based on a given pattern and returning them as `FileExtractedItem`s for further processing.
+It is responsible for **locating files** based on a given pattern and returning them as `ExternalFileItem`s for further processing.
 
 This operation works with any file system supported by [Flysystem](https://flysystem.thephpleague.com/), including **SFTP, local files, AWS S3**, and more.
+
+> 🎵 **Symfony Users**: If you're using the Flysystem Bundle, factories are **automatically created** for each configured storage. See the [Registering the Operation](#registering-the-operation) section below.
 
 ---
 
@@ -37,8 +39,9 @@ $fileFinderConfig = new ExternalFileFinderConfig(
 
 **Parameters:**
 - `directory`: The directory path on the file system to search for files
+- `flavor`: (Optional) The flavor to use for multi-instance operations. With Symfony Flysystem integration, use `flysystem.{storage_name}`
 
-**Input Data:** The operation expects a DataItem containing a regex pattern string to match files.
+**Input Data:** The operation expects a DataItem containing a regex pattern string to match files against filenames (not full paths).
 
 ---
 
@@ -118,53 +121,104 @@ new GenericChainFactory(
 {% capture column2 %}
 #### 🎵 Symfony
 
-In a Symfony application, you should register the operation via Dependency Injection, defining it as a service with the appropriate filesystem adapter.
+**Automatic Flysystem Integration (Recommended)**
+
+If you're using the [Flysystem Bundle](https://github.com/thephpleague/flysystem-bundle), the ETL bundle **automatically** creates `ExternalFileFinderOperation` factories for each configured Flysystem storage via the `FlysystemExternalFileFinderCompiler`.
+
+Simply configure your Flysystem storages in `config/packages/flysystem.yaml`:
+
+```yaml
+# config/packages/flysystem.yaml
+flysystem:
+    storages:
+        # Local storage
+        default.storage:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/default'
+        
+        # SFTP storage
+        sftp.storage:
+            adapter: 'sftp'
+            options:
+                host: 'sftp.example.com'
+                username: '%env(SFTP_USERNAME)%'
+                password: '%env(SFTP_PASSWORD)%'
+                root: '/remote/path'
+                port: 22
+        
+        # S3 storage
+        s3.storage:
+            adapter: 'aws'
+            options:
+                client: 'aws.s3.client'
+                bucket: '%env(S3_BUCKET)%'
+```
+
+The compiler automatically creates factories with flavors:
+- `flysystem.default.storage`
+- `flysystem.sftp.storage`
+- `flysystem.s3.storage`
+
+Use them in your chains:
+
+```php
+// Use the default local storage
+->addLink(new ExternalFileFinderConfig(
+    directory: '/incoming',
+    flavor: 'flysystem.default.storage'
+))
+
+// Use SFTP storage
+->addLink(new ExternalFileFinderConfig(
+    directory: '/remote/imports',
+    flavor: 'flysystem.sftp.storage'
+))
+
+// Use S3 storage
+->addLink(new ExternalFileFinderConfig(
+    directory: 'data/incoming',
+    flavor: 'flysystem.s3.storage'
+))
+```
+
+**Manual Registration (Advanced)**
+
+For custom adapters or non-Flysystem filesystems, register the operation manually:
 
 ```yaml
 services:
   # Define your filesystem adapter
-  app.filesystem.sftp:
+  app.filesystem.custom:
     class: League\Flysystem\PhpseclibV3\SftpAdapter
     arguments:
       $connectionProvider: '@app.sftp.connection'
       $root: '/remote/path'
 
+  # Wrap in FlySystemFileSystem
+  app.filesystem.custom.wrapper:
+    class: Oliverde8\Component\PhpEtl\Model\File\FlySystemFileSystem
+    arguments:
+      $filesystem: '@app.filesystem.custom'
+
   # Register the ETL operation factory
-  app.etl.file_finder.sftp:
+  app.etl.file_finder.custom:
     class: Oliverde8\Component\PhpEtl\GenericChainFactory
     arguments:
-      $operationClass: 'Oliverde8\Component\PhpEtl\ChainOperation\Extract\ExternalFileFinderOperation'
-      $configClass: 'Oliverde8\Component\PhpEtl\OperationConfig\Extract\ExternalFileFinderConfig'
+      $operationClassName: 'Oliverde8\Component\PhpEtl\ChainOperation\Extract\ExternalFileFinderOperation'
+      $configClassName: 'Oliverde8\Component\PhpEtl\OperationConfig\Extract\ExternalFileFinderConfig'
+      $flavor: 'custom'
       $injections:
-        fileSystem: '@app.filesystem.sftp'
-    tags:
-      - { name: etl.operation-factory }
+        fileSystem: '@app.filesystem.custom.wrapper'
 ```
 
-**With multiple file systems:**
-```yaml
-services:
-  # SFTP File Finder
-  app.etl.file_finder.sftp:
-    class: Oliverde8\Component\PhpEtl\GenericChainFactory
-    arguments:
-      $operationClass: 'Oliverde8\Component\PhpEtl\ChainOperation\Extract\ExternalFileFinderOperation'
-      $configClass: 'Oliverde8\Component\PhpEtl\OperationConfig\Extract\ExternalFileFinderConfig'
-      $injections:
-        fileSystem: '@app.filesystem.sftp'
-    tags:
-      - { name: etl.operation-factory }
+Then use with `flavor: 'custom'`:
 
-  # S3 File Finder  
-  app.etl.file_finder.s3:
-    class: Oliverde8\Component\PhpEtl\GenericChainFactory
-    arguments:
-      $operationClass: 'Oliverde8\Component\PhpEtl\ChainOperation\Extract\ExternalFileFinderOperation'
-      $configClass: 'Oliverde8\Component\PhpEtl\OperationConfig\Extract\ExternalFileFinderConfig'
-      $injections:
-        fileSystem: '@app.filesystem.s3'
-    tags:
-      - { name: etl.operation-factory }
+```php
+->addLink(new ExternalFileFinderConfig(
+    directory: '/path/to/files',
+    flavor: 'custom'
+))
 ```
 {% endcapture %}
 {% include block/2column.html column1=column1 column2=column2 %}

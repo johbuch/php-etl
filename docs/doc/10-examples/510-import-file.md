@@ -10,6 +10,9 @@ width: large
 The ETL can be used to fetch files from another filesystem and process them using the ETL. Files will be moved into
 `processing` and `processed` directories as the ETL runs.
 
+> 🎵 **Symfony Users**: If you're using the Flysystem Bundle, factories are automatically created for each storage.
+> See the complete Symfony example below.
+
 
 
 {% capture description %}
@@ -55,6 +58,61 @@ $chainProcessor->process(
 {% endcapture %}
 {% capture column2 %}
 #### 🎵 Symfony
+
+**With Flysystem (Automatic):**
+
+First, configure your Flysystem storage:
+
+```yaml
+# config/packages/flysystem.yaml
+flysystem:
+    storages:
+        default.storage:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/default'
+```
+
+Then create your chain definition:
+
+```php
+namespace App\Etl\ChainDefinition;
+
+use Oliverde8\Component\PhpEtl\ChainConfig;
+use Oliverde8\Component\PhpEtl\OperationConfig\Extract\ExternalFileFinderConfig;
+use Oliverde8\Component\PhpEtl\OperationConfig\Transformer\ExternalFileProcessorConfig;
+use Oliverde8\Component\PhpEtl\OperationConfig\Extract\CsvExtractConfig;
+use Oliverde8\Component\PhpEtl\OperationConfig\Loader\CsvFileWriterConfig;
+use Oliverde8\PhpEtlBundle\Etl\ChainDefinitionInterface\ChainDefinitionInterface;
+
+class ImportFilesDefinition implements ChainDefinitionInterface
+{
+    public function getKey(): string
+    {
+        return 'etl:import-files';
+    }
+
+    public function build(): ChainConfig
+    {
+        return (new ChainConfig())
+            ->addLink(new ExternalFileFinderConfig(
+                directory: '/incoming',
+                flavor: 'flysystem.default.storage'  // Auto-created!
+            ))
+            ->addLink(new ExternalFileProcessorConfig())
+            ->addLink(new CsvExtractConfig())
+            ->addLink(new CsvFileWriterConfig('output.csv'))
+            ->addLink(new ExternalFileProcessorConfig());
+    }
+}
+```
+
+Execute:
+```sh
+./bin/console etl:execute etl:import-files '["/^file[0-9]\.csv$/"]' -p
+```
+
+**Manual (with context):**
 ```sh
 ./bin/console etl:execute myetl "['/^file[0-9]\.csv$/']" "{'dir': '/var/import'}"
 ```
