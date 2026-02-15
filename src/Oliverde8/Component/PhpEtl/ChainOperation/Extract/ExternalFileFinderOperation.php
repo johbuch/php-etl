@@ -39,6 +39,11 @@ class ExternalFileFinderOperation extends AbstractChainOperation implements Data
             $directory = $this->expressionLanguage->evaluate($directory, ['context' => $context->getParameters()]);
         }
 
+        // Ensure pattern has delimiters for preg_match
+        if (!preg_match('/^[\/~#!]/', $pattern)) {
+            $pattern = '/' . $pattern . '/';
+        }
+
         foreach ($this->fileSystem->listContents($directory) as $file) {
             if (preg_match($pattern, (string) $file) !== 0) {
                 $files[] = new ExternalFileItem($directory . "/" . $file, $this->fileSystem);
